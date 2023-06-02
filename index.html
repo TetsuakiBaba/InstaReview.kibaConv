@@ -42,7 +42,7 @@
                     <div class="alert alert-danger" role="alert">
                         特定のデータに場合、csv書き出しが途中までしかできないことがあるので、現在機能を停止しています。ご了承ください。
                     </div>
-                    <button id="export-csv-btn" class="btn btn-primary" disabled>Export CSV</button>
+                    <button id="export-csv-btn" class="btn btn-dark" disabled>Export CSV</button>
                     <button id="export-html-btn" class="btn btn-info">Export html</button>
                 </div>
             </div>
@@ -151,8 +151,14 @@
         // Export htmlボタンがクリックされたときの処理
         document.getElementById('export-html-btn').addEventListener('click', function () {
             const element = document.getElementById('result-container'); // 保存したい要素のIDを指定する
-            const htmlContent = element.outerHTML;
-
+            const htmlContent = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>${element.outerHTML}`;
+            console.log(element.outerHTML);
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
             const url = URL.createObjectURL(blob);
 
