@@ -33,16 +33,17 @@
         </p>
         <div class="row">
             <div class="col-6">
-                <div id="drop-zone" style="border: 2px dashed #ccc; padding: 20px;">
+                <div id="drop-zone" style="border: 2px dashed #ccc; padding: 20px;height:100%;">
                     <p>ここにzipファイルをドラッグ＆ドロップしてください。</p>
                 </div>
             </div>
             <div class="col-6">
                 <div class="text-center mt-4 mb-4">
                     <div class="alert alert-danger" role="alert">
-                        CSV書き出しはUTF-8形式になるため、エクセルファイルで開く場合は文字化けするのでご注意ください。
+                        特定のデータに場合、csv書き出しが途中までしかできないことがあるので、現在機能を停止しています。ご了承ください。
                     </div>
-                    <button id="export-csv-btn" class="btn btn-primary">Export CSV</button>
+                    <button id="export-csv-btn" class="btn btn-primary" disabled>Export CSV</button>
+                    <button id="export-html-btn" class="btn btn-info">Export html</button>
                 </div>
             </div>
         </div>
@@ -127,21 +128,41 @@
 
             // CSVフォーマットに変換してデータを追加
             var cards = document.getElementsByClassName('card-title');
+            console.log(cards.length);
             for (var i = 0; i < cards.length; i++) {
                 var cardTitle = cards[i].textContent;
                 var cardContent = cards[i].nextElementSibling.textContent;
-                let escapedCardContent = cardContent.replace(/"/g, '\\"');
-                var row = [cardTitle, `"${escapedCardContent}"`].join(",");
+                const escapedCardContent = cardContent.replace(/"/g, '\\"');
+                let row = [cardTitle, `\" ${escapedCardContent} test\"`].join(",");
                 csvContent += row + "\r\n";
             }
+            console.log({ csvContent });
 
             // CSVデータをダウンロード
             var encodedUri = encodeURI(csvContent);
+            console.log(encodedUri);
             var link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "data.csv");
+            link.setAttribute("download", "data.txt");
             document.body.appendChild(link);
             link.click();
+        });
+
+        // Export htmlボタンがクリックされたときの処理
+        document.getElementById('export-html-btn').addEventListener('click', function () {
+            const element = document.getElementById('result-container'); // 保存したい要素のIDを指定する
+            const htmlContent = element.outerHTML;
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'element.html'; // ダウンロード時のファイル名を指定する
+            link.click();
+
+            URL.revokeObjectURL(url);
+
         });
     </script>
 </body>
