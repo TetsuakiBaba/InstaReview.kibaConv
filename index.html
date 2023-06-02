@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Kibacoで集めた感想を一括ビュー表示</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            margin-top: 20px;
+        }
+
+        .file-content {
+            margin-bottom: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-lg">
+        <h1>Kibacoで集めた感想を一括ビュー表示</h1>
+        <p>
+            kibacoでダウンロードした学生の感想を一括して閲覧するためのツール。ダウンロードしてきたzipファイルをドラッグ＆ドロップすると、感想を一覧表示するとともに、CSVファイルとしてダウンロードできるようになります。
+        </p>
+        <div class="row">
+            <div class="col-6">
+                <div id="drop-zone" style="border: 2px dashed #ccc; padding: 20px;">
+                    <p>ここにzipファイルをドラッグ＆ドロップしてください。</p>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="text-center mt-4 mb-4">
+                    <div class="alert alert-danger" role="alert">
+                        CSV書き出しはUTF-8形式になるため、エクセルファイルで開く場合は文字化けするのでご注意ください。
+                    </div>
+                    <button id="export-csv-btn" class="btn btn-primary">Export CSV</button>
+                </div>
+            </div>
+        </div>
+        <hr>
+        <div class="row" id="result-container"></div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.6.0/jszip.min.js"></script>
+    <script>
+        // ドラッグアンドドロップされたzipファイルを取得する要素
+        var dropZone = document.getElementById('drop-zone');
+
+        // zipファイルがドロップされたときの処理
+        dropZone.addEventListener('drop', function (event) {
+            event.preventDefault();
+
+            // zipファイルを取得
+            var zipFile = event.dataTransfer.files[0];
+
+            // zipファイルを展開する関数
+            function extractZipFile(file) {
+                var reader = new FileReader();
+
+                reader.onload = function (event) {
+                    var arrayBuffer = event.target.result;
+
+                    // JSZipを使用してzipファイルを展開
+                    JSZip.loadAsync(arrayBuffer)
+                        .then(function (zip) {
+                            // 展開後のファイルを格納する変数
+                            var resultHTML = '';
+
+                            // ナンバリング用のカウンター
+                            var counter = 1;
+
+                            // ファイルを走査
+                            zip.forEach(function (relativePath, file) {
+                                if (file.name.endsWith('.html')) {
+                                    // ファイル名を取得
+                                    var filename = file.name.split('.html')[0];
+
+                                    // ファイルの内容を取得
+                                    file.async('string').then(function (content) {
+                                        // Cardコンポーネントを作成
+                                        resultHTML += '<div class="col-lg-6">';
+                                        resultHTML += '<div class="card mb-4">';
+                                        resultHTML += '<div class="card-body">';
+                                        resultHTML += '<h2 class="card-title">' + counter.toString().padStart(2, '0') + ': ' + filename + '</h2>';
+                                        resultHTML += '<div class="card-text file-content">' + content + '</div>';
+                                        resultHTML += '</div>';
+                                        resultHTML += '</div>';
+                                        resultHTML += '</div>';
+
+                                        // 結果を表示
+                                        document.getElementById('result-container').innerHTML = resultHTML;
+
+                                        // カウンターをインクリメント
+                                        counter++;
+                                    });
+                                }
+                            });
+                        });
+                };
+
+                reader.readAsArrayBuffer(file);
+            }
+
+            extractZipFile(zipFile);
+        });
+
+        // ドロップエリア上でのデフォルトのドラッグアンドドロップ操作を無効化
+        dropZone.addEventListener('dragover', function (event) {
+            event.preventDefault();
+        });
+
+        // Export CSVボタンがクリックされたときの処理
+        document.getElementById('export-csv-btn').addEventListener('click', function () {
+            var csvContent = "data:text/csv;charset=utf-8,";
+
+            // CSVフォーマットに変換してデータを追加
+            var cards = document.getElementsByClassName('card-title');
+            for (var i = 0; i < cards.length; i++) {
+                var cardTitle = cards[i].textContent;
+                var cardContent = cards[i].nextElementSibling.textContent;
+                var row = [cardTitle, cardContent].join(",");
+                csvContent += row + "\r\n";
+            }
+
+            // CSVデータをダウンロード
+            var encodedUri = encodeURI(csvContent);
+            var link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "data.csv");
+            document.body.appendChild(link);
+            link.click();
+        });
+    </script>
+</body>
+
+</html>
