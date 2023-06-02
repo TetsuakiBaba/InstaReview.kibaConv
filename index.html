@@ -130,7 +130,8 @@
             for (var i = 0; i < cards.length; i++) {
                 var cardTitle = cards[i].textContent;
                 var cardContent = cards[i].nextElementSibling.textContent;
-                var row = [cardTitle, cardContent].join(",");
+                let escapedCardContent = cardContent.replace(/"/g, '\\"');
+                var row = [cardTitle, `"${escapedCardContent}"`].join(",");
                 csvContent += row + "\r\n";
             }
 
