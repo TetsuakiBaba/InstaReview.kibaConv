@@ -23,13 +23,20 @@
             margin-bottom: 40px;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+
 </head>
 
 <body>
     <div class="container-lg">
         <h1>Kibacoで集めた感想を一括ビュー表示</h1>
         <p>
-            kibacoでダウンロードした学生の感想を一括して閲覧するためのツール。ダウンロードしてきたzipファイルをドラッグ＆ドロップすると、感想を一覧表示するとともに、CSVファイルとしてダウンロードできるようになります。
+            kibacoでダウンロードした学生の感想を一括して閲覧するためのツール。ダウンロードしてきたzipファイルをドラッグ＆ドロップすると、感想を一覧表示するとともに、CSV, xlsx,
+            htmlファイルとしてダウンロードできるようになります。ただし以下の条件を満たす場合のみ動作します。
+        <ol>
+            <li>感想はpdfやワード等の添付ファイル提出ではなく、テキストボックスのみでの提出にしていること</li>
+            <li>課題のzipファイルをダウンロードする際、「受講生の提出物」のみにチェックをいれてダウンロードすること</li>
+        </ol>
         </p>
         <div class="row">
             <div class="col-6">
@@ -40,9 +47,11 @@
             <div class="col-6">
                 <div class="text-center mt-4 mb-4">
                     <div class="alert alert-danger" role="alert">
-                        特定のデータに場合、csv書き出しが途中までしかできないことがあるので、現在機能を停止しています。ご了承ください。
+                        <strong>注意</strong>
+                        このツールは、kibacoの仕様変更により動作しなくなる可能性があります。ご注意ください。またこのツール利用して生じたいかなる損害についても、一切の責任を負いません。
                     </div>
-                    <button id="export-csv-btn" class="btn btn-dark" disabled>Export CSV</button>
+                    <button id="export-csv-btn" class="btn btn-dark">Export CSV</button>
+                    <button id="export-excel-btn" class="btn btn-success">Export Excel</button>
                     <button id="export-html-btn" class="btn btn-info">Export html</button>
                 </div>
             </div>
@@ -122,31 +131,105 @@
             event.preventDefault();
         });
 
+
+
+        function getStudentNumberFromKibacoID(id) {
+            // 現在の年度下二桁を求める
+            let year = new Date().getFullYear() - 2000;
+
+            let y10 = parseInt(year.toString().slice(0, 1));
+            let y1 = parseInt(year.toString().slice(1, 2));
+            let ky1 = parseInt(id.slice(1, 2));
+            let ky10 = 0;
+
+            if (ky1 > y1) {
+                ky10 = y10 - 1;
+                if (y10 * 10 + y1 - (ky10 * 10 + ky1) > 8) {
+                    alert("在籍し得ないkibaco idです: " + id);
+                }
+            } else {
+                ky10 = y10;
+            }
+            return ky10.toString() + id.slice(1);
+        }
+
         // Export CSVボタンがクリックされたときの処理
         document.getElementById('export-csv-btn').addEventListener('click', function () {
             var csvContent = "data:text/csv;charset=utf-8,";
 
             // CSVフォーマットに変換してデータを追加
             var cards = document.getElementsByClassName('card-title');
-            console.log(cards.length);
             for (var i = 0; i < cards.length; i++) {
                 var cardTitle = cards[i].textContent;
                 var cardContent = cards[i].nextElementSibling.textContent;
-                const escapedCardContent = cardContent.replace(/"/g, '\\"');
-                let row = [cardTitle, `\" ${escapedCardContent} test\"`].join(",");
+
+                // 学修番号と氏名の抽出
+                var studentInfo = cardTitle.split('/')[1];
+                var studentNumber = studentInfo.split(' ')[0];
+
+                // 学修番号が「u」で始まる場合の変換
+                if (studentNumber.startsWith('u')) {
+                    studentNumber = getStudentNumberFromKibacoID(studentNumber);
+                }
+
+                // 氏名の抽出
+                var studentName = studentInfo.split(' ').slice(1).join(' ');
+
+                // ダブルクォーテーションのエスケープ
+                var escapedCardContent = cardContent.replace(/"/g, '""');
+
+                // カンマや改行を含む内容をダブルクォーテーションで囲む
+                let row = [studentNumber, studentName, `"${escapedCardContent}"`].join(",");
                 csvContent += row + "\r\n";
             }
-            console.log({ csvContent });
 
             // CSVデータをダウンロード
             var encodedUri = encodeURI(csvContent);
-            console.log(encodedUri);
             var link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "data.txt");
+            link.setAttribute("download", "data.csv");
             document.body.appendChild(link);
             link.click();
         });
+
+
+        // Export Excelボタンがクリックされたときの処理
+        document.getElementById('export-excel-btn').addEventListener('click', function () {
+            var wb = XLSX.utils.book_new();
+            var ws_name = "Sheet1";
+
+            var data = [];
+            data.push(['学修番号', '氏名', '内容']);
+
+            var cards = document.getElementsByClassName('card-title');
+            for (var i = 0; i < cards.length; i++) {
+                var cardTitle = cards[i].textContent;
+                var cardContent = cards[i].nextElementSibling.textContent;
+
+                // 学修番号と氏名の抽出
+                var studentInfo = cardTitle.split('/')[1];
+                var studentNumber = studentInfo.split(' ')[0];
+
+                // 学修番号が「u」で始まる場合の変換
+                if (studentNumber.startsWith('u')) {
+                    studentNumber = getStudentNumberFromKibacoID(studentNumber);
+                }
+
+                // 氏名の抽出
+                var studentName = studentInfo.split(' ').slice(1).join(' ');
+
+                data.push([studentNumber, studentName, cardContent]);
+            }
+
+            var ws = XLSX.utils.aoa_to_sheet(data);
+
+            XLSX.utils.book_append_sheet(wb, ws, ws_name);
+
+            XLSX.writeFile(wb, 'data.xlsx');
+        });
+
+
+
 
         // Export htmlボタンがクリックされたときの処理
         document.getElementById('export-html-btn').addEventListener('click', function () {
